@@ -1,0 +1,55 @@
+FROM ubuntu:22.04 
+
+RUN printf 'Acquire::http::Pipeline-Depth 0;\n\
+Acquire::http::No-Cache true;\n\
+Acquire::BrokenProxy    true;'\
+>> /etc/apt/apt.conf.d/99fixbadproxy
+
+RUN export DEBIAN_FRONTEND=noninteractive \
+ && export DBUS_SESSION_BUS_ADDRESS=/dev/null \
+ && apt-get update \
+ && apt-get install --yes locales \
+                          build-essential \
+                          libpq-dev \
+                          curl \
+                          gawk \
+                          autoconf \
+                          automake \
+                          bison \
+                          libffi-dev \
+                          libgdbm-dev \
+                          libncurses5-dev \
+                          libsqlite3-dev \
+                          libtool \
+                          libyaml-dev \
+                          pkg-config \
+                          sqlite3 \
+                          zlib1g-dev \
+                          libgmp-dev \
+                          libreadline-dev \
+ && apt autoremove -y \
+ && rm -rf /var/lib/apt/lists/* \
+ && rm -rf /var/cache/apt/archives/* \
+ && rm -rf /var/lib/apt/lists/partial/* \
+ && locale-gen en_US.UTF-8 
+
+RUN curl -sSL https://rvm.io/mpapis.asc | gpg --import - \
+ && curl -sSL https://rvm.io/pkuczynski.asc | gpg --import - \
+ && curl -sSL https://get.rvm.io | bash -s head 
+
+RUN /bin/bash -c "source /etc/profile.d/rvm.sh \ 
+ && rvm install ruby-3.1.2" 
+ 
+RUN /bin/bash -c "source /etc/profile.d/rvm.sh \
+ && gem install rails"
+
+RUN /bin/bash -c "source /etc/profile.d/rvm.sh \
+ && mkdir -p /order-creation && cd /order-creation \
+ && rails new /order-creation --api --skip-bundle --skip-git --database=postgresql \
+ && sed -i 's/gem \"tzinfo-data\", platforms: %i\[ mingw mswin x64_mingw jruby \]/gem \"tzinfo-data\"/g' Gemfile \
+ && cat Gemfile \
+ && bundle install"
+
+#RUN echo 'source /usr/local/rvm/scripts/rvm' >> /etc/profile
+
+WORKDIR /order-creation 
